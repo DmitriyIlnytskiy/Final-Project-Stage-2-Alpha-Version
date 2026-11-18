@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Fleet & Service Hub — Alpha</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f4f6f8; color: #1e293b; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        h1 { color: #0f172a; border-bottom: 2px solid #3b82f6; padding-bottom: 0.5rem; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+        h2 { margin-top: 0; font-size: 1.2rem; color: #334155; }
+        input, select, button { width: 100%; padding: 0.6rem; margin-top: 0.5rem; margin-bottom: 1rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        button { background: #2563eb; color: white; font-weight: 600; border: none; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        .status-bar { background: #e2e8f0; padding: 0.75rem 1rem; border-radius: 6px; font-family: monospace; font-size: 0.9rem; margin-top: 1rem; word-break: break-all; }
+        .badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; background: #dbeafe; color: #1e40af; }
+    </style>
+</head>
+<body>
+    <h1>Vehicle Fleet & Service Hub <span class="badge">Alpha v0.1</span></h1>
+    <div class="status-bar" id="statusBox">Status: Not logged in. Register or log in to start the E2E flow.</div>
+
+    <div class="grid">
+        <!-- Screen 1: Registration -->
+        <div class="card">
+            <h2>1. User Registration</h2>
+            <input type="text" id="regName" placeholder="Full Name (e.g. Dmytro Ilnytskyi)">
+            <input type="email" id="regEmail" placeholder="Email (e.g. client@test.com)">
+            <input type="password" id="regPass" placeholder="Password">
+            <select id="regRole">
+                <option value="client">Client (Vehicle Owner)</option>
+                <option value="mechanic">Mechanic</option>
+                <option value="admin">Administrator</option>
+            </select>
+            <button onclick="registerUser()">Register Account</button>
+        </div>
+
+        <!-- Screen 2: Authentication -->
+        <div class="card">
+            <h2>2. Login (JWT Auth)</h2>
+            <input type="email" id="logEmail" placeholder="Email">
+            <input type="password" id="logPass" placeholder="Password">
+            <button onclick="loginUser()">Log In & Get Token</button>
+        </div>
+
+        <!-- Screen 3: Fleet Management -->
+        <div class="card">
+            <h2>3. Register Vehicle (Client Flow)</h2>
+            <input type="text" id="vehVin" placeholder="VIN (17 chars, e.g. W0L000051X2345678)">
+            <input type="text" id="vehModel" placeholder="Model (e.g. Daewoo Lanos 1.5)">
+            <input type="number" id="vehYear" placeholder="Year (e.g. 2005)">
+            <button onclick="createVehicle()">Save Vehicle to PostgreSQL</button>
+        </div>
+
+        <!-- Screen 4: Service Booking -->
+        <div class="card">
+            <h2>4. Book Work Order (E2E Final Step)</h2>
+            <input type="number" id="orderVehId" placeholder="Vehicle ID (from step 3)">
+            <button onclick="createOrder()">Create Service Work Order</button>
+        </div>
+    </div>
+
+    <script>
+        let jwtToken = "";
+
+        function updateStatus(msg, isError = false) {
+            const box = document.getElementById("statusBox");
+            box.style.background = isError ? "#fee2e2" : "#dcfce7";
+            box.style.color = isError ? "#991b1b" : "#166534";
+            box.innerText = msg;
+        }
+
+        async function registerUser() {
+            const res = await fetch("/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    full_name: document.getElementById("regName").value,
+                    email: document.getElementById("regEmail").value,
+                    password: document.getElementById("regPass").value,
+                    role: document.getElementById("regRole").value
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                updateStatus(`Registered user ID #${data.id} (${data.email}) as ${data.role}. Now log in!`);
+                document.getElementById("logEmail").value = data.email;
+            } else {
+                updateStatus(`Error: ${JSON.stringify(data.detail)}`, true);
+            }
+        }
+
+        async function loginUser() {
+            const formData = new URLSearchParams();
+            formData.append("username", document.getElementById("logEmail").value);
+            formData.append("password", document.getElementById("logPass").value);
+
+            const res = await fetch("/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: formData
+            });
+            const data = await res.json();
+            if (res.ok) {
+                jwtToken = data.access_token;
+                updateStatus(`Authenticated! JWT Token acquired. Ready to add vehicle.`);
+            } else {
+                updateStatus(`Login failed: ${JSON.stringify(data.detail)}`, true);
+            }
+        }
+
+        async function createVehicle() {
+            const res = await fetch("/vehicles/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${jwtToken}`
+                },
+                body: JSON.stringify({
+                    vin: document.getElementById("vehVin").value,
+                    model: document.getElementById("vehModel").value,
+                    year: parseInt(document.getElementById("vehYear").value)
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                updateStatus(`Vehicle saved in PostgreSQL! Vehicle ID = ${data.id} (${data.model}). Enter ID ${data.id} in Step 4.`);
+                document.getElementById("orderVehId").value = data.id;
+            } else {
+                updateStatus(`Vehicle Error: ${JSON.stringify(data.detail)}`, true);
+            }
+        }
+
+        async function createOrder() {
+            const res = await fetch("/orders/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${jwtToken}`
+                },
+                body: JSON.stringify({
+                    vehicle_id: parseInt(document.getElementById("orderVehId").value)
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                updateStatus(`SUCCESS! Work Order #${data.id} created in PostgreSQL (Status: ${data.status}) for Vehicle #${data.vehicle_id}.`);
+            } else {
+                updateStatus(`Order Error: ${JSON.stringify(data.detail)}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

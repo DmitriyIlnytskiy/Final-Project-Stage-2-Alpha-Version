@@ -1,15 +1,21 @@
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from pathlib import Path
 from sqlalchemy.orm import Session
 from database import engine, Base, get_db
 from models import User, Vehicle, WorkOrder
 from schemas import UserCreate, UserResponse, Token, VehicleCreate, VehicleResponse, WorkOrderCreate, WorkOrderResponse
 from auth import get_password_hash, verify_password, create_access_token, get_current_user, require_role
 
-
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Vehicle Fleet & Service Hub API", version="1.0.0")
+
+@app.get("/", response_class=HTMLResponse)
+def serve_frontend():
+    html_path = Path(__file__).parent / "templates" / "index.html"
+    return html_path.read_text(encoding="utf-8")
 
 @app.post("/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
@@ -69,6 +75,5 @@ def create_work_order(order_data: WorkOrderCreate, current_user: User = Depends(
 
 @app.get("/orders/admin-all", dependencies=[Depends(require_role(["admin", "mechanic"]))])
 def get_all_orders(db: Session = Depends(get_db)):
-    
     orders = db.query(WorkOrder).all()
     return orders
