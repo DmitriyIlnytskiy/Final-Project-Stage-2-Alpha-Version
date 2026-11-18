@@ -3,72 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vehicle Fleet & Service Hub — Alpha</title>
+    <title>Vehicle Fleet & Service Hub — Beta v1.0</title>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #f4f6f8; color: #1e293b; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
-        h1 { color: #0f172a; border-bottom: 2px solid #3b82f6; padding-bottom: 0.5rem; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
-        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-        h2 { margin-top: 0; font-size: 1.2rem; color: #334155; }
-        input, select, button { width: 100%; padding: 0.6rem; margin-top: 0.5rem; margin-bottom: 1rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; max-width: 1100px; margin: 1.5rem auto; padding: 0 1rem; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2563eb; padding-bottom: 0.75rem; margin-bottom: 1rem; }
+        h1 { margin: 0; font-size: 1.5rem; }
+        .badge { background: #2563eb; color: white; padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.85rem; }
+        .status-bar { background: #e2e8f0; padding: 0.8rem 1rem; border-radius: 6px; font-family: monospace; font-size: 0.9rem; margin-bottom: 1.2rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 1.2rem; }
+        .card { background: white; padding: 1.25rem; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+        h2 { margin-top: 0; font-size: 1.1rem; color: #1e293b; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem; }
+        input, select, button { width: 100%; padding: 0.55rem; margin-top: 0.4rem; margin-bottom: 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem; }
         button { background: #2563eb; color: white; font-weight: 600; border: none; cursor: pointer; }
         button:hover { background: #1d4ed8; }
-        .status-bar { background: #e2e8f0; padding: 0.75rem 1rem; border-radius: 6px; font-family: monospace; font-size: 0.9rem; margin-top: 1rem; word-break: break-all; }
-        .badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; background: #dbeafe; color: #1e40af; }
+        button.secondary { background: #475569; }
+        button.danger { background: #dc2626; }
+        table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.85rem; }
+        th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <h1>Vehicle Fleet & Service Hub <span class="badge">Alpha v0.1</span></h1>
-    <div class="status-bar" id="statusBox">Status: Not logged in. Register or log in to start the E2E flow.</div>
+    <header>
+        <div>
+            <h1>Vehicle Fleet & Service Hub <span class="badge">Beta v1.0</span></h1>
+        </div>
+        <div id="userControls">
+            <span id="currentUserLabel">Not logged in</span>
+            <button class="secondary" style="width:auto; margin:0 0 0 0.5rem; padding:0.4rem 0.8rem;" onclick="logout()">Logout</button>
+        </div>
+    </header>
 
-    <div class="grid">
-        <!-- Screen 1: Registration -->
+    <div class="status-bar" id="statusBox">Ready. Log in as Client, Mechanic, or Admin to test end-to-end workflows.</div>
+
+    <!-- Auth Section -->
+    <div id="authSection" class="grid">
         <div class="card">
-            <h2>1. User Registration</h2>
-            <input type="text" id="regName" placeholder="Full Name (e.g. Dmytro Ilnytskyi)">
-            <input type="email" id="regEmail" placeholder="Email (e.g. client@test.com)">
-            <input type="password" id="regPass" placeholder="Password">
+            <h2>Register Account</h2>
+            <input type="text" id="regName" placeholder="Full Name">
+            <input type="email" id="regEmail" placeholder="Email">
+            <input type="password" id="regPass" placeholder="Password (min 4 chars)">
             <select id="regRole">
                 <option value="client">Client (Vehicle Owner)</option>
                 <option value="mechanic">Mechanic</option>
                 <option value="admin">Administrator</option>
             </select>
-            <button onclick="registerUser()">Register Account</button>
+            <button onclick="registerUser()">Register</button>
         </div>
-
-        <!-- Screen 2: Authentication -->
         <div class="card">
-            <h2>2. Login (JWT Auth)</h2>
+            <h2>Login</h2>
             <input type="email" id="logEmail" placeholder="Email">
             <input type="password" id="logPass" placeholder="Password">
-            <button onclick="loginUser()">Log In & Get Token</button>
+            <button onclick="loginUser()">Log In</button>
+        </div>
+    </div>
+
+    <!-- Workspace Section -->
+    <div id="workspaceSection" class="hidden">
+        <!-- Role Enforcement Verification Card -->
+        <div class="card" style="margin-bottom: 1.2rem; background: #fffbeb; border-color: #fde68a;">
+            <h2>Backend RBAC Security Check (Review Demonstration)</h2>
+            <p style="font-size:0.85rem; margin:0 0 0.5rem 0;">Verify that access control is enforced by FastAPI dependencies rather than UI hiding. Clicking below as a <b>Client</b> or <b>Mechanic</b> will attempt an Admin-only action and return <code>403 Forbidden</code>.</p>
+            <button class="danger" style="width:auto;" onclick="testUnauthorizedAdminCall()">Test Admin-Only Endpoint (/users/mechanics)</button>
         </div>
 
-        <!-- Screen 3: Fleet Management -->
-        <div class="card">
-            <h2>3. Register Vehicle (Client Flow)</h2>
-            <input type="text" id="vehVin" placeholder="VIN (17 chars, e.g. W0L000051X2345678)">
-            <input type="text" id="vehModel" placeholder="Model (e.g. Daewoo Lanos 1.5)">
-            <input type="number" id="vehYear" placeholder="Year (e.g. 2005)">
-            <button onclick="createVehicle()">Save Vehicle to PostgreSQL</button>
-        </div>
+        <div class="grid">
+            <!-- CLIENT PANEL -->
+            <div id="clientPanel" class="card hidden">
+                <h2>Client: Add Vehicle</h2>
+                <input type="text" id="vehVin" placeholder="VIN (e.g. W0L000051X2345678)">
+                <input type="text" id="vehModel" placeholder="Model (e.g. Daewoo Lanos 1.5)">
+                <input type="number" id="vehYear" placeholder="Year (e.g. 2005)">
+                <button onclick="createVehicle()">Add Vehicle</button>
 
-        <!-- Screen 4: Service Booking -->
-        <div class="card">
-            <h2>4. Book Work Order (E2E Final Step)</h2>
-            <input type="number" id="orderVehId" placeholder="Vehicle ID (from step 3)">
-            <button onclick="createOrder()">Create Service Work Order</button>
+                <h2>Client: Book Work Order</h2>
+                <select id="clientVehicleSelect"></select>
+                <input type="text" id="orderNotes" placeholder="Issue description (e.g. Oil change & brake check)">
+                <button onclick="createOrder()">Submit Work Order</button>
+            </div>
+
+            <!-- MECHANIC PANEL -->
+            <div id="mechanicPanel" class="card hidden">
+                <h2>Mechanic: Log Labor & Parts</h2>
+                <input type="number" id="mechOrderId" placeholder="Assigned Work Order ID">
+                <select id="serviceSelect"></select>
+                <button onclick="attachService()">Add Service to Work Order</button>
+
+                <select id="partSelect"></select>
+                <input type="number" id="partQty" value="1" min="1" placeholder="Quantity">
+                <button onclick="attachPart()">Deduct Part & Add to Order</button>
+
+                <h2>Mechanic: Update Status</h2>
+                <select id="mechStatusSelect">
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                </select>
+                <button class="secondary" onclick="updateOrderStatus()">Update Order Status</button>
+            </div>
+
+            <!-- ADMIN PANEL -->
+            <div id="adminPanel" class="card hidden">
+                <h2>Admin: Assign Mechanic to Order</h2>
+                <input type="number" id="adminOrderId" placeholder="Work Order ID">
+                <select id="mechanicSelect"></select>
+                <button onclick="assignMechanic()">Assign Mechanic & Start</button>
+
+                <h2>Admin: Add Inventory Part</h2>
+                <input type="text" id="newPartCode" placeholder="Part Code (e.g. BRK-PAD-02)">
+                <input type="text" id="newPartName" placeholder="Part Name (e.g. Front Brake Pads)">
+                <input type="number" id="newPartPrice" placeholder="Price ($)">
+                <input type="number" id="newPartStock" placeholder="Initial Stock Qty">
+                <button class="secondary" onclick="createPart()">Add Part to PostgreSQL</button>
+            </div>
+
+            <!-- LIVE WORK ORDERS TABLE -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <h2>Live Work Orders (Role-Filtered from PostgreSQL)</h2>
+                <button class="secondary" style="width:auto; padding:0.35rem 0.8rem;" onclick="refreshData()">Refresh Data</button>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Vehicle ID</th>
+                            <th>Client ID</th>
+                            <th>Mechanic ID</th>
+                            <th>Status</th>
+                            <th>Notes</th>
+                            <th>Total Cost ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
-        let jwtToken = "";
+        let token = localStorage.getItem("token") || "";
+        let userRole = localStorage.getItem("role") || "";
+        let userName = localStorage.getItem("full_name") || "";
 
-        function updateStatus(msg, isError = false) {
+        function setStatus(msg, isError = false) {
             const box = document.getElementById("statusBox");
             box.style.background = isError ? "#fee2e2" : "#dcfce7";
             box.style.color = isError ? "#991b1b" : "#166534";
             box.innerText = msg;
+        }
+
+        function authHeaders() {
+            return { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
         }
 
         async function registerUser() {
@@ -84,39 +168,123 @@
             });
             const data = await res.json();
             if (res.ok) {
-                updateStatus(`Registered user ID #${data.id} (${data.email}) as ${data.role}. Now log in!`);
+                setStatus(`Registered ${data.email} (${data.role}). Please log in.`);
                 document.getElementById("logEmail").value = data.email;
             } else {
-                updateStatus(`Error: ${JSON.stringify(data.detail)}`, true);
+                setStatus(`Registration error: ${JSON.stringify(data.detail)}`, true);
             }
         }
 
         async function loginUser() {
-            const formData = new URLSearchParams();
-            formData.append("username", document.getElementById("logEmail").value);
-            formData.append("password", document.getElementById("logPass").value);
+            const body = new URLSearchParams();
+            body.append("username", document.getElementById("logEmail").value);
+            body.append("password", document.getElementById("logPass").value);
 
             const res = await fetch("/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: formData
+                body
             });
             const data = await res.json();
             if (res.ok) {
-                jwtToken = data.access_token;
-                updateStatus(`Authenticated! JWT Token acquired. Ready to add vehicle.`);
+                token = data.access_token;
+                userRole = data.role;
+                userName = data.full_name;
+                localStorage.setItem("token", token);
+                localStorage.setItem("role", userRole);
+                localStorage.setItem("full_name", userName);
+                setStatus(`Logged in as ${userName} [Role: ${userRole.toUpperCase()}]`);
+                initWorkspace();
             } else {
-                updateStatus(`Login failed: ${JSON.stringify(data.detail)}`, true);
+                setStatus(`Login failed: ${data.detail}`, true);
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            token = ""; userRole = ""; userName = "";
+            document.getElementById("authSection").classList.remove("hidden");
+            document.getElementById("workspaceSection").classList.add("hidden");
+            document.getElementById("currentUserLabel").innerText = "Not logged in";
+            setStatus("Logged out.");
+        }
+
+        async function initWorkspace() {
+            if (!token) return;
+            document.getElementById("authSection").classList.add("hidden");
+            document.getElementById("workspaceSection").classList.remove("hidden");
+            document.getElementById("currentUserLabel").innerText = `${userName} (${userRole.toUpperCase()})`;
+
+            document.getElementById("clientPanel").classList.toggle("hidden", userRole !== "client");
+            document.getElementById("mechanicPanel").classList.toggle("hidden", userRole !== "mechanic");
+            document.getElementById("adminPanel").classList.toggle("hidden", userRole !== "admin");
+
+            await refreshData();
+        }
+
+        async function refreshData() {
+            // Load Work Orders
+            const ordRes = await fetch("/orders/", { headers: authHeaders() });
+            if (ordRes.ok) {
+                const orders = await ordRes.json();
+                const tbody = document.getElementById("ordersTableBody");
+                tbody.innerHTML = orders.map(o => `
+                    <tr>
+                        <td>#${o.id}</td>
+                        <td>${o.vehicle_id}</td>
+                        <td>${o.client_id}</td>
+                        <td>${o.mechanic_id || "Unassigned"}</td>
+                        <td><b>${o.status}</b></td>
+                        <td>${o.notes || ""}</td>
+                        <td>$${o.total_cost.toFixed(2)}</td>
+                    </tr>
+                `).join("");
+            }
+
+            if (userRole === "client") {
+                const vRes = await fetch("/vehicles/my", { headers: authHeaders() });
+                if (vRes.ok) {
+                    const vehicles = await vRes.json();
+                    document.getElementById("clientVehicleSelect").innerHTML = vehicles.map(v =>
+                        `<option value="${v.id}">#${v.id} — ${v.model} (${v.vin})</option>`
+                    ).join("");
+                }
+            }
+
+            if (userRole === "mechanic") {
+                const [sRes, pRes] = await Promise.all([
+                    fetch("/catalog/services", { headers: authHeaders() }),
+                    fetch("/catalog/parts", { headers: authHeaders() })
+                ]);
+                if (sRes.ok) {
+                    const services = await sRes.json();
+                    document.getElementById("serviceSelect").innerHTML = services.map(s =>
+                        `<option value="${s.id}">${s.title} ($${s.base_price})</option>`
+                    ).join("");
+                }
+                if (pRes.ok) {
+                    const parts = await pRes.json();
+                    document.getElementById("partSelect").innerHTML = parts.map(p =>
+                        `<option value="${p.id}">${p.name} ($${p.price} | Stock: ${p.stock_quantity})</option>`
+                    ).join("");
+                }
+            }
+
+            if (userRole === "admin") {
+                const mRes = await fetch("/users/mechanics", { headers: authHeaders() });
+                if (mRes.ok) {
+                    const mechs = await mRes.json();
+                    document.getElementById("mechanicSelect").innerHTML = mechs.map(m =>
+                        `<option value="${m.id}">#${m.id} — ${m.full_name} (${m.email})</option>`
+                    ).join("");
+                }
             }
         }
 
         async function createVehicle() {
             const res = await fetch("/vehicles/", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${jwtToken}`
-                },
+                headers: authHeaders(),
                 body: JSON.stringify({
                     vin: document.getElementById("vehVin").value,
                     model: document.getElementById("vehModel").value,
@@ -124,32 +292,91 @@
                 })
             });
             const data = await res.json();
-            if (res.ok) {
-                updateStatus(`Vehicle saved in PostgreSQL! Vehicle ID = ${data.id} (${data.model}). Enter ID ${data.id} in Step 4.`);
-                document.getElementById("orderVehId").value = data.id;
-            } else {
-                updateStatus(`Vehicle Error: ${JSON.stringify(data.detail)}`, true);
-            }
+            res.ok ? (setStatus(`Added vehicle #${data.id}`), refreshData()) : setStatus(`Error: ${JSON.stringify(data.detail)}`, true);
         }
 
         async function createOrder() {
             const res = await fetch("/orders/", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${jwtToken}`
-                },
+                headers: authHeaders(),
                 body: JSON.stringify({
-                    vehicle_id: parseInt(document.getElementById("orderVehId").value)
+                    vehicle_id: parseInt(document.getElementById("clientVehicleSelect").value),
+                    notes: document.getElementById("orderNotes").value
                 })
             });
             const data = await res.json();
-            if (res.ok) {
-                updateStatus(`SUCCESS! Work Order #${data.id} created in PostgreSQL (Status: ${data.status}) for Vehicle #${data.vehicle_id}.`);
-            } else {
-                updateStatus(`Order Error: ${JSON.stringify(data.detail)}`, true);
-            }
+            res.ok ? (setStatus(`Created Work Order #${data.id}`), refreshData()) : setStatus(`Error: ${JSON.stringify(data.detail)}`, true);
         }
+
+        async function assignMechanic() {
+            const orderId = document.getElementById("adminOrderId").value;
+            const res = await fetch(`/orders/${orderId}/assign`, {
+                method: "PATCH",
+                headers: authHeaders(),
+                body: JSON.stringify({ mechanic_id: parseInt(document.getElementById("mechanicSelect").value) })
+            });
+            const data = await res.json();
+            res.ok ? (setStatus(`Assigned mechanic to Order #${data.id}`), refreshData()) : setStatus(`Error: ${JSON.stringify(data.detail)}`, true);
+        }
+
+        async function attachService() {
+            const orderId = document.getElementById("mechOrderId").value;
+            const res = await fetch(`/orders/${orderId}/services`, {
+                method: "POST",
+                headers: authHeaders(),
+                body: JSON.stringify({ service_id: parseInt(document.getElementById("serviceSelect").value), quantity: 1 })
+            });
+            const data = await res.json();
+            res.ok ? (setStatus(`Service logged! New total: $${data.total_cost}`), refreshData()) : setStatus(`Error: ${JSON.stringify(data.detail)}`, true);
+        }
+
+        async function attachPart() {
+            const orderId = document.getElementById("mechOrderId").value;
+            const res = await fetch(`/orders/${orderId}/parts`, {
+                method: "POST",
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    part_id: parseInt(document.getElementById("partSelect").value),
+                    quantity: parseInt(document.getElementById("partQty").value)
+                })
+            });
+            const data = await res.json();
+            res.ok ? (setStatus(`Part deducted & added! New total: $${data.total_cost}`), refreshData()) : setStatus(`Error: ${JSON.stringify(data.detail)}`, true);
+        }
+
+        async function updateOrderStatus() {
+            const orderId = document.getElementById("mechOrderId").value;
+            const res = await fetch(`/orders/${orderId}/status`, {
+                method: "PATCH",
+                headers: authHeaders(),
+                body: JSON.stringify({ status: document.getElementById("mechStatusSelect").value })
+            });
+            const data = await res.json();
+            res.ok ? (setStatus(`Order #${data.id} marked as ${data.status}`), refreshData()) : setStatus(`Error: ${JSON.stringify(data.detail)}`, true);
+        }
+
+        async function createPart() {
+            const res = await fetch("/catalog/parts", {
+                method: "POST",
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    part_code: document.getElementById("newPartCode").value,
+                    name: document.getElementById("newPartName").value,
+                    price: parseFloat(document.getElementById("newPartPrice").value),
+                    stock_quantity: parseInt(document.getElementById("newPartStock").value)
+                })
+            });
+            const data = await res.json();
+            res.ok ? setStatus(`Added part ${data.part_code} to inventory`) : setStatus(`Error: ${JSON.stringify(data.detail)}`, true);
+        }
+
+        async function testUnauthorizedAdminCall() {
+            const res = await fetch("/users/mechanics", { headers: authHeaders() });
+            const data = await res.json();
+            setStatus(`HTTP ${res.status}: ${JSON.stringify(data)}`, !res.ok);
+        }
+
+        if (token) initWorkspace();
     </script>
 </body>
 </html>
