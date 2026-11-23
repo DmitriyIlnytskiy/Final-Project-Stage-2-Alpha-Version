@@ -37,7 +37,7 @@
 
     <div class="status-bar" id="statusBox">Ready. Log in as Client, Mechanic, or Admin to test end-to-end workflows.</div>
 
-    <!-- Auth Section -->
+    
     <div id="authSection" class="grid">
         <div class="card">
             <h2>Register Account</h2>
@@ -59,9 +59,9 @@
         </div>
     </div>
 
-    <!-- Workspace Section -->
+    
     <div id="workspaceSection" class="hidden">
-        <!-- Role Enforcement Verification Card -->
+        
         <div class="card" style="margin-bottom: 1.2rem; background: #fffbeb; border-color: #fde68a;">
             <h2>Backend RBAC Security Check (Review Demonstration)</h2>
             <p style="font-size:0.85rem; margin:0 0 0.5rem 0;">Verify that access control is enforced by FastAPI dependencies rather than UI hiding. Clicking below as a <b>Client</b> or <b>Mechanic</b> will attempt an Admin-only action and return <code>403 Forbidden</code>.</p>
@@ -69,7 +69,7 @@
         </div>
 
         <div class="grid">
-            <!-- CLIENT PANEL -->
+            
             <div id="clientPanel" class="card hidden">
                 <h2>Client: Add Vehicle</h2>
                 <input type="text" id="vehVin" placeholder="VIN (e.g. W0L000051X2345678)">
@@ -83,7 +83,7 @@
                 <button onclick="createOrder()">Submit Work Order</button>
             </div>
 
-            <!-- MECHANIC PANEL -->
+            
             <div id="mechanicPanel" class="card hidden">
                 <h2>Mechanic: Log Labor & Parts</h2>
                 <input type="number" id="mechOrderId" placeholder="Assigned Work Order ID">
@@ -102,7 +102,7 @@
                 <button class="secondary" onclick="updateOrderStatus()">Update Order Status</button>
             </div>
 
-            <!-- ADMIN PANEL -->
+            
             <div id="adminPanel" class="card hidden">
                 <h2>Admin: Assign Mechanic to Order</h2>
                 <input type="number" id="adminOrderId" placeholder="Work Order ID">
@@ -115,9 +115,15 @@
                 <input type="number" id="newPartPrice" placeholder="Price ($)">
                 <input type="number" id="newPartStock" placeholder="Initial Stock Qty">
                 <button class="secondary" onclick="createPart()">Add Part to PostgreSQL</button>
+
+                <h2>Admin: Add Service</h2>
+                <input type="text" id="newSrvTitle" placeholder="Service Title (e.g. Spark Plugs & Ignition Service)">
+                <select id="newSrvCatId"></select>
+                <input type="number" id="newSrvPrice" placeholder="Base Price ($)">
+                <button onclick="createService()">Add Service to Catalog</button>
             </div>
 
-            <!-- LIVE WORK ORDERS TABLE -->
+            
             <div class="card" style="grid-column: 1 / -1;">
                 <h2>Live Work Orders (Role-Filtered from PostgreSQL)</h2>
                 <button class="secondary" style="width:auto; padding:0.35rem 0.8rem;" onclick="refreshData()">Refresh Data</button>
@@ -143,6 +149,12 @@
         let token = localStorage.getItem("token") || "";
         let userRole = localStorage.getItem("role") || "";
         let userName = localStorage.getItem("full_name") || "";
+
+        function formatError(detail) {
+        if (typeof detail === "string") return detail;
+        if (Array.isArray(detail)) return detail.map(e => `${e.loc.slice(-1)[0]}: ${e.msg}`).join("; ");
+        return JSON.stringify(detail);
+}
 
         function setStatus(msg, isError = false) {
             const box = document.getElementById("statusBox");
@@ -223,7 +235,6 @@
         }
 
         async function refreshData() {
-            // Load Work Orders
             const ordRes = await fetch("/orders/", { headers: authHeaders() });
             if (ordRes.ok) {
                 const orders = await ordRes.json();
@@ -278,8 +289,16 @@
                         `<option value="${m.id}">#${m.id} — ${m.full_name} (${m.email})</option>`
                     ).join("");
                 }
+                const cRes = await fetch("/catalog/categories", { headers: authHeaders() });
+                if (cRes.ok) {
+                    const cats = await cRes.json();
+                    document.getElementById("newSrvCatId").innerHTML = cats.map(c =>
+                        `<option value="${c.id}">#${c.id} — ${c.name}</option>`
+                    ).join("");
+                }
             }
         }
+        
 
         async function createVehicle() {
             const res = await fetch("/vehicles/", {
@@ -369,6 +388,20 @@
             const data = await res.json();
             res.ok ? setStatus(`Added part ${data.part_code} to inventory`) : setStatus(`Error: ${JSON.stringify(data.detail)}`, true);
         }
+
+        async function createService() {
+            const res = await fetch("/catalog/services", {
+                method: "POST",
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    title: document.getElementById("newSrvTitle").value,
+                    category_id: parseInt(document.getElementById("newSrvCatId").value),
+                    base_price: parseFloat(document.getElementById("newSrvPrice").value)
+                })
+            });
+            const data = await res.json();
+            res.ok ? setStatus(`Added service #${data.id}: ${data.title} ($${data.base_price})`) : setStatus(`Error: ${JSON.stringify(data.detail)}`, true);
+}
 
         async function testUnauthorizedAdminCall() {
             const res = await fetch("/users/mechanics", { headers: authHeaders() });

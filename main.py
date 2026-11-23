@@ -14,33 +14,43 @@ from schemas import (
 )
 from auth import get_password_hash, verify_password, create_access_token, get_current_user, require_role
 
-# Recreate or ensure all Beta tables exist in PostgreSQL
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Vehicle Fleet & Service Hub API — Beta v1.0", version="1.0.0")
 
-# Seed default hierarchical categories, services, and parts if empty
 def seed_initial_catalog():
     db = SessionLocal()
     try:
         if db.query(ServiceCategory).count() == 0:
-            root_cat = ServiceCategory(name="Maintenance & Diagnostics", description="Scheduled vehicle maintenance")
-            db.add(root_cat)
+            maint = ServiceCategory(name="Maintenance & Diagnostics", description="Scheduled vehicle maintenance")
+            brakes = ServiceCategory(name="Brakes & Suspension", description="Brake pads, rotors, shocks, alignment")
+            engine = ServiceCategory(name="Engine & Electrical", description="Timing, ignition, battery, alternator")
+            db.add_all([maint, brakes, engine])
             db.commit()
-            db.refresh(root_cat)
+            for c in (maint, brakes, engine):
+                db.refresh(c)
 
-            sub_cat = ServiceCategory(name="Engine & Fluids", description="Oil, filters, and engine tune-ups", parent_id=root_cat.id)
+            sub_cat = ServiceCategory(name="Engine & Fluids", description="Oil, filters, and fluids", parent_id=maint.id)
             db.add(sub_cat)
             db.commit()
             db.refresh(sub_cat)
 
             db.add_all([
                 ServiceItem(title="Full Synthetic Oil & Filter Change", category_id=sub_cat.id, base_price=45.0),
-                ServiceItem(title="OBD-II Computer Diagnostics", category_id=root_cat.id, base_price=30.0),
+                ServiceItem(title="OBD-II Computer Diagnostics", category_id=maint.id, base_price=30.0),
+                ServiceItem(title="Front Brake Pads & Rotors Replacement", category_id=brakes.id, base_price=85.0),
+                ServiceItem(title="4-Wheel Alignment & Balancing", category_id=brakes.id, base_price=55.0),
+                ServiceItem(title="Spark Plugs & Ignition Coil Service", category_id=engine.id, base_price=65.0),
+                ServiceItem(title="Coolant Flush & Thermostat Check", category_id=sub_cat.id, base_price=50.0),
+                ServiceItem(title="Timing Belt & Water Pump Replacement", category_id=engine.id, base_price=220.0),
+                ServiceItem(title="Battery & Alternator Load Test", category_id=engine.id, base_price=25.0),
             ])
             db.add_all([
                 Part(part_code="FLT-OIL-01", name="OEM Oil Filter", price=12.5, stock_quantity=25),
                 Part(part_code="OIL-5W40-4L", name="Synthetic Motor Oil 5W-40 (4L)", price=38.0, stock_quantity=15),
+                Part(part_code="BRK-PAD-FR", name="Ceramic Front Brake Pads", price=48.0, stock_quantity=12),
+                Part(part_code="SPK-IRID-4", name="Iridium Spark Plug Set (4x)", price=42.0, stock_quantity=10),
+                Part(part_code="FLT-AIR-02", name="Engine Air Filter", price=18.0, stock_quantity=20),
             ])
             db.commit()
     finally:
@@ -53,7 +63,6 @@ def serve_frontend():
     html_path = Path(__file__).parent / "templates" / "index.html"
     return html_path.read_text(encoding="utf-8")
 
-# --- AUTHENTICATION ---
 @app.post("/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == user_data.email).first():
@@ -87,7 +96,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def list_mechanics(current_user: User = Depends(require_role(["admin"])), db: Session = Depends(get_db)):
     return db.query(User).filter(User.role == "mechanic").all()
 
-# --- CATALOG & INVENTORY (Public Read / Admin Write) ---
+
 @app.get("/catalog/categories", response_model=List[CategoryResponse])
 def get_categories(db: Session = Depends(get_db)):
     return db.query(ServiceCategory).all()
@@ -96,8 +105,23 @@ def get_categories(db: Session = Depends(get_db)):
 def get_services(db: Session = Depends(get_db)):
     return db.query(ServiceItem).all()
 
+@app.post("/catalog/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
+def create_category(cat: CategoryCreate, current_user: User = Depends(require_role(["admin"])), db: Session = Depends(get_db)):
+    if cat.parent_id is not None:
+        parent = db.query(ServiceCategory).filter(ServiceCategory.id == cat.parent_id).first()
+        if not parent:
+            raise HTTPException(status_code=400, detail="Parent category does not exist")
+    new_cat = ServiceCategory(**cat.model_dump())
+    db.add(new_cat)
+    db.commit()
+    db.refresh(new_cat)
+    return new_cat
+
 @app.post("/catalog/services", response_model=ServiceResponse, status_code=status.HTTP_201_CREATED)
 def create_service(item: ServiceCreate, current_user: User = Depends(require_role(["admin"])), db: Session = Depends(get_db)):
+    category = db.query(ServiceCategory).filter(ServiceCategory.id == item.category_id).first()
+    if not category:
+        raise HTTPException(status_code=400, detail=f"Category ID {item.category_id} does not exist")
     srv = ServiceItem(**item.model_dump())
     db.add(srv)
     db.commit()
@@ -118,7 +142,7 @@ def create_part(part: PartCreate, current_user: User = Depends(require_role(["ad
     db.refresh(new_part)
     return new_part
 
-# --- VEHICLES (Client Role) ---
+
 @app.get("/vehicles/my", response_model=List[VehicleResponse])
 def get_my_vehicles(current_user: User = Depends(require_role(["client"])), db: Session = Depends(get_db)):
     return db.query(Vehicle).filter(Vehicle.owner_id == current_user.id).all()
